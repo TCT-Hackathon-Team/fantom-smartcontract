@@ -1,0 +1,15 @@
+await hardhatWallet.deployed();
+        );
+            1
+            [guard1Hash, guard2Hash, guard3Hash],
+hardhatWallet = await Wallet.deploy(
+const Wallet = await ethers.getContractFactory("Wallet");
+        guard3Hash = await hash.getHashOf(guard3.address);
+        guard2Hash = await hash.getHashOf(guard2.address);
+        guard1Hash = await hash.getHashOf(guard1.address);
+        newOwnerHash = await hash.getHashOf(newOwner.address);
+ownerHash = await hash.getHashOf(owner.address);
+[owner, newOwner, guard1, guard2, guard3] = await ethers.getSigners();
+await hash.deployed();
+const hash = await Hash.deploy();
+const Hash = await ethers.getContractFactory("Hash");

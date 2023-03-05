@@ -374,6 +374,16 @@ contract Wallet is ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
         );
     }
 
+    function getNewOwnerVoteCount(
+        uint256 recoveryRoundNum,
+        address newOwnerAddress
+    ) external view returns (uint256) {
+        return
+            recoveryRounds[recoveryRoundNum].guardianVotedLength[
+                newOwnerAddress
+            ];
+    }
+
     /************************************************
      *  Guardian Management
      ***********************************************/
