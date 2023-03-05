@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const recoveryThreshold = 1;
 
 describe("Hash contract", function () {
     it("Should return the right hash", async function () {
@@ -31,18 +32,30 @@ describe("Wallet contract", function () {
         await hash.deployed();
 
         /// Get hashes of the addresses
-        [owner, newOwner, guard1, guard2, guard3] = await ethers.getSigners();
+        [
+            owner,
+            newOwner,
+            guard1,
+            guard2,
+            guard3,
+            newGuard1,
+            newGuard2,
+            newGuard3,
+        ] = await ethers.getSigners();
         ownerHash = await hash.getHashOf(owner.address);
         newOwnerHash = await hash.getHashOf(newOwner.address);
         guard1Hash = await hash.getHashOf(guard1.address);
         guard2Hash = await hash.getHashOf(guard2.address);
         guard3Hash = await hash.getHashOf(guard3.address);
+        newGuard1Hash = await hash.getHashOf(newGuard1.address);
+        newGuard2Hash = await hash.getHashOf(newGuard2.address);
+        newGuard3Hash = await hash.getHashOf(newGuard3.address);
 
         /// Deploy Wallet contract
         const Wallet = await ethers.getContractFactory("Wallet");
         hardhatWallet = await Wallet.deploy(
             [guard1Hash, guard2Hash, guard3Hash],
-            1
+            recoveryThreshold
         );
 
         await hardhatWallet.deployed();
@@ -70,12 +83,42 @@ describe("Wallet contract", function () {
         });
     });
 
+    describe("Wallet", function () {
+        it("Should allow owner to deposit", async function () {
+            await owner.sendTransaction({
+                to: hardhatWallet.address,
+                value: 100,
+            });
+            expect(await hardhatWallet.getBalance()).to.equal(100);
+        });
+
+        it("Should allow owner to withdraw", async function () {
+            await hardhatWallet.connect(owner).deposit({ value: 100 });
+            await hardhatWallet.connect(owner).withdraw(100);
+
+            const walletBalance = await hardhatWallet.getBalance();
+            expect(walletBalance).to.equal(0);
+        });
+    });
+
     describe("Guardians", function () {
         describe("Guardian management", function () {
             it("Should allow owner to add a guardian", async function () {
-                await hardhatWallet.connect(owner).addGuardian(guard1.address);
-                const isGuardian = await hardhatWallet.isGuardian(guard1Hash);
+                await hardhatWallet
+                    .connect(owner)
+                    .addGuardian(newGuard1.address);
+                const isGuardian = await hardhatWallet.isGuardian(
+                    newGuard1Hash
+                );
                 expect(isGuardian).to.equal(true);
+            });
+
+            it("Should allow owner to remove a guardian", async function () {
+                await hardhatWallet
+                    .connect(owner)
+                    .removeGuardian(guard1.address);
+                const isGuardian = await hardhatWallet.isGuardian(guard1Hash);
+                expect(isGuardian).to.equal(false);
             });
         });
 
@@ -87,7 +130,6 @@ describe("Wallet contract", function () {
                     .initiateRecovery(newOwner.address);
 
                 const isRecovering = await hardhatWallet.inRecovery();
-                console.log("Recovering....", isRecovering);
                 expect(isRecovering).to.equal(true);
             });
 
@@ -125,7 +167,6 @@ describe("Wallet contract", function () {
                 await hardhatWallet
                     .connect(guard2)
                     .supportRecovery(newOwner.address);
-                // await hardhatWallet.connect(guard1).executeRecovery(newOwner.address);
                 await hardhatWallet
                     .connect(guard1)
                     ["executeRecovery(address)"](newOwner.address);
@@ -134,67 +175,54 @@ describe("Wallet contract", function () {
                 expect(walletOwner).to.equal(newOwner.address);
             });
         });
-
-        describe("Recovery status management", function () {
-            it("Should allow to get recovery round", async function () {
-                await hardhatWallet.connect(owner).deposit({ value: 100 });
-                await hardhatWallet
-                    .connect(guard1)
-                    .initiateRecovery(newOwner.address);
-
-                await hardhatWallet
-                    .connect(guard2)
-                    .supportRecovery(newOwner.address);
-
-                await hardhatWallet
-                    .connect(guard3)
-                    .supportRecovery(newOwner.address);
-
-                const recoveryRound = await hardhatWallet.getRecoveryRound();
-                expect(recoveryRound).to.equal(1);
-            });
-
-            it("Should allow to get new owner vote count", async function () {
-                await hardhatWallet.connect(owner).deposit({ value: 100 });
-                await hardhatWallet
-                    .connect(guard1)
-                    .initiateRecovery(newOwner.address);
-
-                await hardhatWallet
-                    .connect(guard2)
-                    .supportRecovery(newOwner.address);
-
-                await hardhatWallet
-                    .connect(guard3)
-                    .supportRecovery(newOwner.address);
-
-                const recoveryRound = await hardhatWallet.getRecoveryRound();
-
-                const voteCount = await hardhatWallet.getNewOwnerVoteCount(
-                    recoveryRound,
-                    newOwner.address
-                );
-
-                expect(voteCount).to.equal(3);
-            });
-        });
     });
 
-    describe("Wallet", function () {
-        it("Should allow owner to deposit", async function () {
-            await owner.sendTransaction({
-                to: hardhatWallet.address,
-                value: 100,
-            });
-            expect(await hardhatWallet.getBalance()).to.equal(100);
+    describe("Recovery", function () {
+        it("Should allow to get recovery threshold", async function () {
+            const recoveryThreshold = await hardhatWallet.threshold();
+            expect(recoveryThreshold).to.equal(recoveryThreshold);
         });
 
-        it("Should allow owner to withdraw", async function () {
+        it("Should allow to get recovery round", async function () {
             await hardhatWallet.connect(owner).deposit({ value: 100 });
-            await hardhatWallet.connect(owner).withdraw(100);
+            await hardhatWallet
+                .connect(guard1)
+                .initiateRecovery(newOwner.address);
 
-            const walletBalance = await hardhatWallet.getBalance();
-            expect(walletBalance).to.equal(0);
+            await hardhatWallet
+                .connect(guard2)
+                .supportRecovery(newOwner.address);
+
+            await hardhatWallet
+                .connect(guard3)
+                .supportRecovery(newOwner.address);
+
+            const recoveryRound = await hardhatWallet.getRecoveryRound();
+            expect(recoveryRound).to.equal(1);
+        });
+
+        it("Should allow to get a owner's vote count", async function () {
+            await hardhatWallet.connect(owner).deposit({ value: 100 });
+            await hardhatWallet
+                .connect(guard1)
+                .initiateRecovery(newOwner.address);
+
+            await hardhatWallet
+                .connect(guard2)
+                .supportRecovery(newOwner.address);
+
+            await hardhatWallet
+                .connect(guard3)
+                .supportRecovery(newOwner.address);
+
+            const recoveryRound = await hardhatWallet.getRecoveryRound();
+
+            const voteCount = await hardhatWallet.getNewOwnerVoteCount(
+                recoveryRound,
+                newOwner.address
+            );
+
+            expect(voteCount).to.equal(3);
         });
     });
 });
