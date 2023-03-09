@@ -17,11 +17,21 @@ module.exports = {
         process.env.GUARDIAN_3_PRIVATE_KEY,
       ],
     },
+    fantomMainnet: {
+      url: process.env.CHAINSTACK_MAINNET_FANTOM_ENDPOINT,
+      accounts: [
+        process.env.OWNER_PRIVATE_KEY,
+        process.env.GUARDIAN_1_PRIVATE_KEY,
+        process.env.GUARDIAN_2_PRIVATE_KEY,
+        process.env.GUARDIAN_3_PRIVATE_KEY,
+      ],
+    },
   },
   etherscan: {
     apiKey: {
       goerli: process.env.ETHERSCAN_API_KEY,
       ftmTestnet: process.env.FTMSCAN_API_KEY,
+      opera: process.env.FTMSCAN_API_KEY,
     },
   },
 };
